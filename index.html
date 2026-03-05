@@ -1,1 +1,480 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Hikari · Meta Ads Dashboard</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #050508; font-family: 'Segoe UI', sans-serif; color: #e5e7eb; }
+  @keyframes fadeIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+  @keyframes spin { to { transform: rotate(360deg) } }
+  .card { animation: fadeIn 0.35s ease forwards; background: #0d0d14; border: 1px solid #1a1f2e; border-radius: 14px; }
+  .client-card:hover { border-color: #1877f2 !important; transform: translateY(-2px); }
+  .client-card { transition: all 0.2s; cursor: pointer; }
+  input[type=text] { background: #0d0d14; color: #e5e7eb; border: 1px solid #1a1f2e; border-radius: 8px; padding: 7px 12px; font-size: 13px; outline: none; width: 100%; }
+  input[type=text]:focus { border-color: #1877f2; }
+  select { background: #0d0d14; color: #e5e7eb; border: 1px solid #1a1f2e; border-radius: 8px; padding: 7px 12px; font-size: 13px; cursor: pointer; outline: none; }
+  .ai-btn { background: linear-gradient(135deg, #1877f2, #7c3aed); color: #fff; border: none; border-radius: 8px; padding: 8px 16px; font-size: 12px; font-weight: 700; cursor: pointer; transition: opacity 0.2s; }
+  .ai-btn:hover { opacity: 0.85; }
+  .ai-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  ::-webkit-scrollbar { width: 6px; } ::-webkit-scrollbar-track { background: #0d0d14; } ::-webkit-scrollbar-thumb { background: #1a1f2e; border-radius: 3px; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useEffect, useMemo } = React;
 
+const CLIENTS = [
+  { name: "Dr. Fernando Junger", token: "EAARMQ5pt4EwBQ6MzgLDZCraHYAgLV8HMCkF18wYsBJHU5SJdC35kGAg9ZBBZAaMVNa57GA7MjUEgGrp4GA0UWffjL4if93uATJ9M5W4IvpJtZCK7w5T5ncZAKP5D4vo9qbH16cIw19aOOX4ddSBD92xAe1FYZCUvcN1SuaziALggmZBfLUZCCNLqq92fiYkcNDB2ZAg2K0YwGArFTbSn8NwyQEB00wOcAZAJoSUokHKxsZD" },
+  { name: "Dr. Edgar", token: "EAARMQ5pt4EwBQyy9FGt0mjMfYSBMhripQQcGbLYVSGxJAqW3qZBPVHpvbwQ7MDwicy5T66kHlLssmQh0cKDZB05JIB1zobnQscZCNlRTM00V42COXBsxH8X9LmHIFBCjukABh57c3KNMtKM6Iffqj2sBHNQoJqiYzZBNZARxZAqBZCNlvSZAWZCgNzWJ3gdLJ5WSbNEafZBxBWZAV52hRYpn678aWZBm1VvOqEh957kQpVnR" },
+  { name: "Dr. Bruno Mota", token: "EAARMQ5pt4EwBQ2tDqLd2FvABGg0ZAZBSK9FW1IQ99Fn1xSNSFyApaTRi5geLeJWEHRoQkx6Rw8vgSaj0e6B16uwNEzH9nVsU0qmh3iKZAPobRZCPtmMjP3urrM4fgtZA77N1mp0qJZBacNV66Hn1pbiLtjhE4KDZAi18bmtrGfcS7ZBohmRVkBvk3pWXxPhRWQoloEhnLfuGO4n9fXN1Mf2QT9GuE0YuhGJKUFE6NJ2U" },
+  { name: "Dr. Paulo Victor", token: "EAAUuRtZB1YPwBQ6XkHfKACnTdyTEptIhpM22pLAfG7tsThHhSOZBzcL2761UWFpXO6nwhox12nVLX4xp6OKP16PrDEUERyP7k16ZBdPmU6h7gQYfxpbVZAzSMgRjJZA67A0FPorrZCZCpos6PIkgyBcvjfh9zYvmLMf1eZBw6gZC4MJzdjDAbuvnCZAC3KJEekkJeseJk8sjYflVECbnaWTtZAf8t7mPma6MVE5FTNrjOcXUKffe1IV7Sacb1cM03ol8BIT2ki4REJwONkKZCsfuaZC2Wb1nZC" },
+  { name: "Stone TV", token: "EAARMQ5pt4EwBQxODKGYupRXCXP8iqGVZAMcymDkZCmgc5CNg4HPLjwmhX468uAp8xsKEQnMmdOnVgercqzqBeZAOHCmtLCiOn2bmo0K7j1dzDWNPZAc2lXZBWyrfKsRTZADu9FvZA1zpx1Im5btZBpLBPPyATz0bZCGYIZAxUln116VramQiiMjrmV89tliXKmrn0bhn4sojNQMilGo7iAXcd4mtlbWO6OWQynYTCERZCiC" },
+  { name: "Hortix", token: "EAARMQ5pt4EwBQyNHqEZA8VrSjI8nEsIl4ojWlVNSoeZBqMlIZAWxZCHdZARuEXDOZB2Bh8DZAqTLrTNsObBrZCODi8oHy1U2a9WUNDXnH9HoJwlA2hoxXbZC4NQjFJKS09YbqV2wXr5WeLt9A66zGGmbRqOi0EGRC6fXjRHD90ij2UZCZBJlFFZCSK0Ojdq92n5qog9tjKJolhqrCRCMobDpKP88zZCODiW9yh3GNKTdYaS0ZD" },
+  { name: "Mega Minas", token: "EAARMQ5pt4EwBQ9cjrdYq6MUn5OGBDr4Ieutjl68NCRZBZAdkifmicjeZCJX20tgW0Xgfa12DgCGtZBrCzyaH56g0SgbVBenZAPXSeWP8gZCgaSEAoLZBYU5t9UbpTZCUCOvtJ8EbPzf44KVhBb7TQaveZBzmbbMQBzJYNKWFxrlYtBECIBFHsG5oqSFtlC2cK9vHiUyz8nhZC3ogerRlR6kHnao0tXQkRv6GuDDevA1lsZD" },
+  { name: "Novaderma Imperatriz", token: "EAARMQ5pt4EwBQZCyYFu0yVhIHtvuJebDGI8XdTdFRd17Ta8UmwEYOWOq14sLnwNXv1zWSPdKV3YsAVQ0EnSwHNCPvBmKC48ChFKrkm9yNGAVrZAGxiu5LWhtLdLxRE94vOpklQ0ZBBCjO9UPLoI0ctLetuZCLHFDMZBfwAzqgTR3ZBgQixYZAqwJ96t9BZC2IoNprihXNASpbEdtZC8GWnvGt0VbVc4JZA1GvDDGYVqbrS" },
+  { name: "Itz e Açaí", token: "EAAUdMuHVQXQBQ5KKZCqzwnaf7yRP8d8ZBk9cuGGtMeGF8LfHedKBaDA7uEHduNz3ZBE1LeKTTVo6iiqrBIWhqqXwZAZBmvkFg8pHKxB1kxF3e2gh6sICaroMplgwpZAPExoVUPRq5I14ZATiryl9zv0DPBzLjXSBUnP2mCnfa38QEn3C40ZBMXZBQjJrgyBxScgOlPME39ycZAUQlGudUiUOfQ32w2DByMdWy3iES3juOltlF7NCbYE82CVdTvZAveEwhzfIAcC0RHGRlbWBgJZCvZA5x2mww" },
+  { name: "Colégio Cebama", token: "EAAd5elk8V74BQxwkLmQZCObSVwzRWmZA1MPmw07Ny7aNZCT6TuRKszrAVtcJts5dZCh5Ex2zscBRWZCEZB5S72UajusKC5hkW9OUZBXyzYtSp6no2znsrl9Y6Gg7DZClZABKEGNZBKn94CGKLMSrPnGUcvWDP1nYeVhIhTSJYpyZCEtk1UI3uT17L8FN0IUG4M8mBhoqrJrsd9dTtICzqAamu0KI3nKdqy4rerOe6FXNq5mnyGa4t4PjfOCjOeZAJyng5fzS8KG5HuVSJpqZAVQrvSdJZCqka5JQZDZD" },
+  { name: "Dr. Cruz", token: "EAARMQ5pt4EwBQ0zAlbnMaMr4o8IZCzKJWWg5D4HPNgBZALxIOtNE40qg7mZBPivdSZAZA8P66azy8wqUZATxWxl6dRHC4z8RUMY5kdA9DoXU9ZCehuUrHhRO2BE6HrcgGo6nNGZB7XJrgSozJ4kRH1cHJ9gWADghaDehj6IKbZAB4yHO9tjZCXxywZAH5bGudTrPvqC0S2TdlL75wClmz9CTv655Ar6LNGsg7tMQjYhdBwZD" },
+  { name: "Hikari", token: "EAAaO3IjQ5QEBQyJJ2cAtr6VanZCYQEM7zz6bttAVXIJZC0woZCUgq2AFKpW2wWZARISmoB17hDybOZAQ07z4CibhxQIx0bKIDCbEqC4Pd9ZBZBOCTWpZBAALIEGozXv8fQ0UaZBVvpTqbZCNTBZBGwZApxOsLh6bkhInJfmQjZBSSGiRl2C0Fsi2ASw713I7a8ZCLHjoKcSPfhw8qSF6Qes5XGHtstZB3Vm8qiLdJwfN9P3O6GWt5iSHjejSvuWgbiz48Mz3oE8CGUGqNKSWITdq4RVRQ6xFSid" },
+  { name: "Dra. Raíza", token: "EAARMQ5pt4EwBQ0dZAs06nNZCzMdwgc6EZCGFZBlKWCgekqFtEZB8e5spkIj1UgZABLv7VwE2s7Bn5PBJd5RZB6sIGI5HFV0oXzr0oBu8JVRZAjZANQaryCFZAaqCCh8M4rT8NJwiy0esLZCPhWtEaRZClJ7GbMZBaFlvtKH7X2P4yZBtcx2VD9jZAgRZCv8euCZC1M1ZAiD0ZCVVTJTZArKZAKIkeCirNqxhadOpXChu7XQhk2IhyCjoZD" },
+  { name: "Itz Net", token: "EAARMQ5pt4EwBQZBz6iMxzmWpkXb6CbmdS9VvWmshlFRqMxRWvUXpWN7QZCVZAxFbwEVKi3JTv2AAkC6lF1vg48nqCghswUgqsJH84Qazt1HUp8B0PLZCbXxrYTG3tX3xq6t0Ve1dH3YezXrddX78u55T9hZCDNrqMqpI8bS6Gkfr68ZC0fadRZBQ6iQl6ql4FKrSepKbaXYKUXObWJph2pgaC8AwwaRdRgrlQZCOZCNwZD" },
+  { name: "Dr. Angelo", token: "EAARMQ5pt4EwBQxM63eQXu8rLTKTHNUdZCY0OdbstylbmvmLmv0FKrRc3KtbOxvIGXGOx7m0nSfaruEV3MEPyBnIdkad5nNQVNGyXWh1aR3phDaJ08rFSxNYFiJWbkkCZBfRZBSi4GZC0hCpKUNmYXwmvlt6fTEb9ZCYb1B4r73F2r2DVPG7IIPlKGqRZCOpBDWV1oMqx22jyXQh0zR6QJZBw0Gvm83fUVuxNBkU5IHh" },
+  { name: "Dr. Fábio", token: "EAARMQ5pt4EwBQxWTgurYVgp59GsnGl8o2AK8umnV2oOSeOHELgbZA2gXKihJvPsi6WS0yt9dNHZC38JZBTjVx7bMMQ7fl1FZCh7DWZAvKS8aFcFpM7aAwFI9dzhPxp9So1nmWm4RZCyy0ZBgOU5aE4sAjGr6brognfj1txZCh8crhZB4JjlbjJK0TVGb3PbkFccsAZA4qKXbGUXnXjtH2Yp014tP9ZA5vDrh9KZCiJmdd2YZD" },
+  { name: "Dra. Joelma", token: "EAARMQ5pt4EwBQ0jlRp2126fNeKBr2vnvoJLUqZBZC7PpwJinWw4FreSyVWD59liTEViK0HjS3ZBuT4ONtet2ftjT5N4R8P9YgO2CGCo97DoKHJWZB7sN9IBGZBDvyjrKhL4cV4d20sX67N3f1UgQHvTikjUAsIDg4GBRfH8pHBiJKTN4cB6fcpFfeD9ih8rR4VxVOZA3sXaJPtfDNTOij1HTzEO8oTUCZBe0XYTtwAZD" },
+  { name: "Atend Clientes Hikari", token: "EAARMQ5pt4EwBQ3PI1eMNzH3VMGVsm7jJDYPm3IAZBi2TWm90Tyfs1wZBea0ZCzKwwKL3rFcchBsYm1tXisHVJEwJPFSchYTISVOOklDqp1cRXogeDJwuRym7NzpPlp6KqZCNHY49SowQQOOIpIFRoawguUDhQD4xUZAUtOIwQDnZBWmv8P98Hr7Fd1B5q8VDZAtxWwUeIGd2Qgq95hhuCUl85KGqBrWgvxlMiZBYscMox5XA2sSHxbTIkEOZCAnMdd4J5oYJU82MkfZBlrk50lZAtvjaNkM" },
+  { name: "Presley Mourão", token: "EAARMQ5pt4EwBQZCGrSooE6SeYvpZCg4MNMUUqpdFKUkb6AwC6fJ4TZBZA1xAl1VSPAKlWZBlczruBy3pRpOZC6ac9RePX3hi2BOZAKj0L6Qsjwg7fhwlMtE4c8rGE4vtdHEzuCmnfvRxEczucPljgxIVVbMZC5tCpKlQ1nhs9eWr3ZA4b3ZA0oNcfgUMxZCKZC3PUDH2IZAGwVhuJVkL0Yn3bAGFO7FiDdwtZCU9D9I4vMdg4ZD" },
+  { name: "Ecoservice", token: "EAARMQ5pt4EwBQ7skQqUL04bmOxk0LJGpZALmrgkEBTwb5UcPmUWbmJcIMoGQAE5IU3NLiNPNE8YW2PsixqsGIM259CQii0m1avUB4pV9RJb4GmhXP2yTxbaVSxFiIZCpGWiBQKFuI83uwHj84EIDv2qwt3CQxSTIVc2QoOJkBHdsMPTQsRz4BmEYZC7PSLZAmAdckYcm43vB2JROlajeMiRHnUNXLwP00E8eGZCOu" },
+  { name: "Dr. Andrei", token: "EAARMQ5pt4EwBQ2G4lmNQA8sZB5HhWYE6d6xqFoBYRrzwZAGAqBh6egw1QS5RPphYy9G81u7OKlvAKtVUsufnxBjZBDcQeZCT01lMIyYCUinhlQtczakFs1Ai0l0iHgSoj1hlYoC8ZCgsWEH1OzRgyiti1fMOZAqFmQGHwJYIZA2hirlZB8MFkA6y9BIrMyP0ERUfRbPpkeRKquYvPPZCgOMamhXZCGolukfttZCHTggmPEZB" },
+  { name: "Yello Chat", token: "EAARMQ5pt4EwBQZBXMaZChfU7lkjspkaqYLH0BeVlFkoGZCp3Bz5Bu9zRekEwqQyKFBd3m8wxZA03Ew6lQELmzyQ5KD5Xyw7YkZB3TJ5lAFFygG1pUaGN1yQ6ZAawaisRYyeEzmRZCwGZCAdX2LanneyZB7ein3iuroWaXiDZAMgG9yhEqAXfhMGpg0yNXYiRRpQtNWeEeRy7DZA5DdCz9M5GkzYZCuVRMacQ6yv2nd7TUrzi" },
+  { name: "Dr. José Thiago", token: "EAARMQ5pt4EwBQZCkduYpiQtlS9tP9lpyZB87kepJelJxPnr5J4kCNCncIBGhCgTpHZAW0JrSTkth2XYsmTUJK9NTyAcH5MElgsNjNZAhW6hGkVZCz8LmEwwIUybeg6M9cpZAJ2ppZAoUSfoZCiuFt3rvk3Jbi34Fn902ugjkZBBsDb7CJV3JvZCWYknqImUHI9ye9nAWMilrvyTZBxik2VABKiB5wYeZBZCZAIIHzzFhIyufwZD" },
+  { name: "Novaderma Açailândia", token: "EAARMQ5pt4EwBQZBP9yZAMm2efO9an9u1GK2nxgt7KC6cTn3XPpbfebMCBopcH0GIOwllGff2o2e5wtNk0mcuXPCZC3NSZAkejvp7bObUIGngvkgPhfIDTRGZCqEj6icv7DEaPjYZBU34XkpeblKZAqPrHMaTCFORidWFzgwiXdZAthgVIttX2ZBI7KyIC3sybZCwGGgBzkZCBdmKPqHvTPkcImlzZCBaDRm2zROFnVA4g0cZD" },
+  { name: "Dra. Marta", token: "EAARMQ5pt4EwBQxQTVWXjytSXyY2WRaKlDFi03ZCuZAtFgHyzBRP33KsXpd16ltzYKdH0Tbs359QBzZBYKKkUrz0LMOdpDmbvwQqyMO8VZAOF5t7Ulc5EiWmXLKc9TuLcnOgVWytA3JdCZA4QBMLZAQvSoU8piRFbEceid3ZBEmZC0HC3mDQpUZBnKZCZB1uydZAo68fLvnXNHDdapwfBi9Ir17po8YUW3BZBZCVUxOWk3REDAZD" },
+  { name: "Dr. André Pagotto", token: "EAARMQ5pt4EwBQ2LCtDbCwl1MyW5LydgWn0BytcP8lx8kLssWQXjS0J62cCTaHC7vsUQ30nhzfZAjZC8lsyHdXyOxr2HYVjrgaVdftmwHBUhalAj1l2CZAZCChZCGzidLTTgoqHoaX0A5mhZADfEL1kcTyC6Cuq2lOuyo7l6AYoZBiBGfwFcC307oXvzhPWIubM2rhLHTZAuTMvBQhsj7j4gWhAJKPQOMmDNYfDosFgsZD" },
+  { name: "Voz Educa", token: "EAARMQ5pt4EwBQ3ueXA7ecX0AXhRQWUJ3SKkCSVZA0nuq8gDRZC8ZA5X6hbfBr1SbupO5m76ljOxsbA0vIVYe14RZBhzVf065nTDR8ygg8m8KZBww2NgNiZCEfio0Bm17BjslGhjQ8h7F0FI96n8ev3bgTJZAoR9vsf9K5h4MlMKv087yC2ttohlWzbEEENcLZCbnoeIqOnZCugOZB7qfjx2U7ZC8Kt3z1zkZBJ4O0oGF65wZD" },
+  { name: "Marktec Telecom", token: "EAARMQ5pt4EwBQZCh8iu2BZAYfzmZCYHAS10IuLnc5ot1SAd4DBzZAd6Tpf25P00ZBhQXiUsAlOyL5KVGjvZAUfb0DxQeknp1VmlTsRZBfdGG1AxZCOFQqJNZAnT1jUZBQAwg2OTjGIyjI1IJgMZBBMe0LMSwCoyAkt8CWPik7Q3KOZBYdVmZAOYTGQO0jZBZBQcA9LtEM8pI5Vfy9vjYJbYzZAwm1ZAyXUxLZB59brTaKl1SZA9NtJt" },
+  { name: "Dr. Thiago Sivieri", token: "EAARMQ5pt4EwBQ8HN78u3GzceyxZAp6Pr4wv04XxvsACdFH5ZBqbKW5LdGxNwZBua03ly6zeBvGI0JPQrcNZA52avIk0cwZBm0NlcyXjnCZCEiDbvSxL0EFmWLDBHWL243gBE5GiavX1zelHcC6ZB8ZCh4wZACyF5nN9kBg8omKBk5BH19mWJfuVIK6dDDm1V67xRStEye9GnfIMUEGYxgoiA0g3ov30x4JjMTZCZCb735MZD" },
+  { name: "Dr. Fábio Carvalho", token: "EAARMQ5pt4EwBQ4LZBOqHZAvxMkkPz6SeI0YliZAon5sA5ZCd2hSRWJ5f3L0jrQL7sN53JzjvvmUKcDWh6JtGI2YGXr44vjUMvsBbzJFJbkQaabORf5yw3zxWo4IPjTVP9Y4NJ9V1T45iG4RgbVKDBdwZCR6lndFEYUUSjouC1ub9acxZCwrksa51x7czC9N6sfDZABHtV2sFXi5IPFQjTNgTaR65bn4WUfB8RdDcWps" },
+];
+
+const META_API = "https://graph.facebook.com/v25.0";
+const CLAUDE_API = "https://api.anthropic.com/v1/messages";
+const fmt = (n) => n != null ? Number(n).toLocaleString("pt-BR", { minimumFractionDigits: 2 }) : "—";
+const fmtInt = (n) => n != null ? Number(n).toLocaleString("pt-BR") : "—";
+const statusColor = (s) => ({ ACTIVE: "#22c55e", PAUSED: "#f59e0b", ARCHIVED: "#6b7280", DELETED: "#ef4444" }[s] || "#6b7280");
+
+const DATE_PRESETS = [
+  { label: "7d", value: "last_7d" },
+  { label: "14d", value: "last_14d" },
+  { label: "30d", value: "last_30d" },
+  { label: "90d", value: "last_90d" },
+];
+
+const SORT_OPTIONS = [
+  { label: "Nome", value: "name" },
+  { label: "Maior gasto", value: "spend_desc" },
+  { label: "Menor gasto", value: "spend_asc" },
+  { label: "Mais cliques", value: "clicks_desc" },
+  { label: "Maior CTR", value: "ctr_desc" },
+  { label: "Pior saúde", value: "health_asc" },
+];
+
+function computeHealth(insights, campaigns) {
+  if (!insights) return { score: null, alerts: [], tags: [] };
+  const ctr = Number(insights.ctr || 0);
+  const cpc = Number(insights.cpc || 0);
+  const impressions = Number(insights.impressions || 0);
+  const spend = Number(insights.spend || 0);
+  const active = campaigns?.filter(c => c.status === "ACTIVE").length || 0;
+  let score = 10;
+  const alerts = [];
+  const tags = [];
+  if (impressions === 0) { alerts.push({ level: "red", msg: "Sem impressões no período — campanhas podem estar inativas ou com problema de entrega." }); score -= 4; }
+  if (ctr < 0.5 && impressions > 0) { alerts.push({ level: "red", msg: `CTR muito baixo (${ctr.toFixed(2)}%) — criativo ou público precisam de revisão urgente.` }); score -= 3; }
+  else if (ctr < 1.0 && impressions > 0) { alerts.push({ level: "yellow", msg: `CTR abaixo do ideal (${ctr.toFixed(2)}%) — considere testar novos criativos ou segmentações.` }); score -= 1.5; }
+  else if (ctr >= 2.0) tags.push({ color: "#22c55e", label: "CTR excelente" });
+  if (cpc > 5 && spend > 0) { alerts.push({ level: "yellow", msg: `CPC alto (R$ ${fmt(cpc)}) — verifique a competitividade do público ou ajuste o lance.` }); score -= 1.5; }
+  if (active === 0) { alerts.push({ level: "yellow", msg: "Nenhuma campanha ativa no momento." }); score -= 2; }
+  if (ctr >= 1.0 && cpc <= 3 && active > 0) tags.push({ color: "#22c55e", label: "Conta saudável" });
+  return { score: Math.max(0, Math.round(score * 10) / 10), alerts, tags };
+}
+
+function scoreColor(s) {
+  if (s === null) return "#4b5563";
+  if (s >= 8) return "#22c55e";
+  if (s >= 5) return "#f59e0b";
+  return "#ef4444";
+}
+
+async function fetchClient(client, datePreset) {
+  try {
+    const [uRes, aRes] = await Promise.all([
+      fetch(`${META_API}/me?fields=id,name&access_token=${client.token}`),
+      fetch(`${META_API}/me/adaccounts?fields=id,name,account_status,currency,amount_spent&access_token=${client.token}`)
+    ]);
+    const uData = await uRes.json();
+    const aData = await aRes.json();
+    if (uData.error) throw new Error(uData.error.message);
+    const accounts = aData.data || [];
+    const accountsWithInsights = await Promise.all(accounts.map(async (acc) => {
+      try {
+        const [iRes, cRes] = await Promise.all([
+          fetch(`${META_API}/${acc.id}/insights?fields=impressions,clicks,spend,reach,cpc,ctr&date_preset=${datePreset}&access_token=${client.token}`),
+          fetch(`${META_API}/${acc.id}/campaigns?fields=id,name,status,objective&limit=20&access_token=${client.token}`)
+        ]);
+        const iData = await iRes.json();
+        const cData = await cRes.json();
+        const campaigns = cData.data || [];
+        const insights = iData.data?.[0] || null;
+        return { ...acc, insights, campaigns, health: computeHealth(insights, campaigns) };
+      } catch { return { ...acc, insights: null, campaigns: [], health: { score: null, alerts: [], tags: [] } }; }
+    }));
+    return { ...client, fbName: uData.name, accounts: accountsWithInsights, error: null };
+  } catch (e) {
+    return { ...client, fbName: null, accounts: [], error: e.message };
+  }
+}
+
+async function askClaude(clientName, summary) {
+  const prompt = `Você é especialista em tráfego pago Meta Ads da agência Hikari Consultoria.\n\nAnalise os dados do cliente "${clientName}" e forneça:\n1. Diagnóstico rápido (2-3 linhas)\n2. Até 3 recomendações práticas numeradas\n\nDados:\n- Impressões: ${fmtInt(summary.impressions)}\n- Cliques: ${fmtInt(summary.clicks)}\n- CTR: ${Number(summary.ctr||0).toFixed(2)}%\n- Gasto: R$ ${fmt(summary.spend)}\n- CPC: R$ ${fmt(summary.cpc)}\n- Alcance: ${fmtInt(summary.reach)}\n- Campanhas ativas: ${summary.active} de ${summary.campaigns}\n- Score de saúde: ${summary.score}/10\n\nSeja direto e prático em português brasileiro. Sem markdown com asteriscos.`;
+  const res = await fetch(CLAUDE_API, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ model: "claude-sonnet-4-20250514", max_tokens: 1000, messages: [{ role: "user", content: prompt }] })
+  });
+  const data = await res.json();
+  return data.content?.[0]?.text || "Não foi possível gerar análise.";
+}
+
+const Pill = ({ label, active, onClick }) => (
+  <button onClick={onClick} style={{ padding: "5px 13px", borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: "pointer", border: "none", transition: "all 0.15s", background: active ? "#1877f2" : "#0d0d14", color: active ? "#fff" : "#4b5563", outline: active ? "none" : "1px solid #1a1f2e" }}>{label}</button>
+);
+
+const HealthBar = ({ score }) => {
+  if (score === null) return <span style={{ fontSize: 11, color: "#4b5563" }}>—</span>;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+      <div style={{ flex: 1, height: 5, background: "#1a1f2e", borderRadius: 99, overflow: "hidden", minWidth: 50 }}>
+        <div style={{ width: `${score * 10}%`, height: "100%", background: scoreColor(score), borderRadius: 99, transition: "width 0.5s ease" }} />
+      </div>
+      <span style={{ fontSize: 12, fontWeight: 700, color: scoreColor(score), minWidth: 24 }}>{score}</span>
+    </div>
+  );
+};
+
+function App() {
+  const [data, setData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [reloading, setReloading] = useState(false);
+  const [selected, setSelected] = useState(null);
+  const [view, setView] = useState("overview");
+  const [datePreset, setDatePreset] = useState("last_30d");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [sortBy, setSortBy] = useState("name");
+  const [campaignSearch, setCampaignSearch] = useState("");
+  const [campaignStatus, setCampaignStatus] = useState("ALL");
+  const [aiAnalysis, setAiAnalysis] = useState({});
+  const [aiLoading, setAiLoading] = useState({});
+
+  async function loadData(preset) {
+    const results = await Promise.all(CLIENTS.map(c => fetchClient(c, preset)));
+    setData(results);
+    return results;
+  }
+
+  useEffect(() => { setLoading(true); loadData(datePreset).finally(() => setLoading(false)); }, []);
+
+  async function handleDateChange(preset) {
+    setDatePreset(preset); setReloading(true); setAiAnalysis({});
+    await loadData(preset); setReloading(false);
+  }
+
+  const clientSummary = (c) => {
+    const spend = c.accounts.reduce((s, a) => s + Number(a.insights?.spend || 0), 0);
+    const clicks = c.accounts.reduce((s, a) => s + Number(a.insights?.clicks || 0), 0);
+    const impressions = c.accounts.reduce((s, a) => s + Number(a.insights?.impressions || 0), 0);
+    const reach = c.accounts.reduce((s, a) => s + Number(a.insights?.reach || 0), 0);
+    const ctr = impressions > 0 ? (clicks / impressions) * 100 : 0;
+    const cpc = clicks > 0 ? spend / clicks : 0;
+    const campaigns = c.accounts.reduce((s, a) => s + (a.campaigns?.length || 0), 0);
+    const active = c.accounts.reduce((s, a) => s + (a.campaigns?.filter(cp => cp.status === "ACTIVE").length || 0), 0);
+    const scores = c.accounts.map(a => a.health?.score).filter(s => s !== null);
+    const avgScore = scores.length > 0 ? scores.reduce((a, b) => a + b, 0) / scores.length : null;
+    const allAlerts = c.accounts.flatMap(a => a.health?.alerts || []);
+    return { spend, clicks, impressions, reach, ctr, cpc, campaigns, active, avgScore, allAlerts };
+  };
+
+  const filteredData = useMemo(() => {
+    let d = [...data];
+    if (search) d = d.filter(c => c.name.toLowerCase().includes(search.toLowerCase()));
+    if (statusFilter === "OK") d = d.filter(c => !c.error);
+    if (statusFilter === "ERRO") d = d.filter(c => !!c.error);
+    d.sort((a, b) => {
+      const sa = clientSummary(a), sb = clientSummary(b);
+      if (sortBy === "name") return a.name.localeCompare(b.name);
+      if (sortBy === "spend_desc") return sb.spend - sa.spend;
+      if (sortBy === "spend_asc") return sa.spend - sb.spend;
+      if (sortBy === "clicks_desc") return sb.clicks - sa.clicks;
+      if (sortBy === "ctr_desc") return sb.ctr - sa.ctr;
+      if (sortBy === "health_asc") return (sa.avgScore ?? 99) - (sb.avgScore ?? 99);
+      return 0;
+    });
+    return d;
+  }, [data, search, statusFilter, sortBy]);
+
+  const totalSpend = data.reduce((s, c) => s + clientSummary(c).spend, 0);
+  const totalClicks = data.reduce((s, c) => s + clientSummary(c).clicks, 0);
+  const totalCampaigns = data.reduce((s, c) => s + clientSummary(c).campaigns, 0);
+  const totalActive = data.reduce((s, c) => s + clientSummary(c).active, 0);
+  const alertCount = data.reduce((s, c) => s + clientSummary(c).allAlerts.filter(a => a.level === "red").length, 0);
+  const presetLabel = DATE_PRESETS.find(d => d.value === datePreset)?.label || "30d";
+  const clientDetail = selected ? data.find(d => d.name === selected) : null;
+
+  const filteredCampaigns = (campaigns) => {
+    let r = [...campaigns];
+    if (campaignSearch) r = r.filter(c => c.name.toLowerCase().includes(campaignSearch.toLowerCase()));
+    if (campaignStatus !== "ALL") r = r.filter(c => c.status === campaignStatus);
+    return r;
+  };
+
+  async function handleAnalyze(clientName) {
+    const client = data.find(d => d.name === clientName);
+    if (!client) return;
+    const s = clientSummary(client);
+    setAiLoading(p => ({ ...p, [clientName]: true }));
+    try {
+      const text = await askClaude(clientName, { ...s, score: s.avgScore });
+      setAiAnalysis(p => ({ ...p, [clientName]: text }));
+    } catch (e) {
+      setAiAnalysis(p => ({ ...p, [clientName]: "Erro ao gerar análise. Tente novamente." }));
+    }
+    setAiLoading(p => ({ ...p, [clientName]: false }));
+  }
+
+  if (loading) return (
+    <div style={{ background: "#050508", minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center" }}>
+      <div style={{ textAlign: "center" }}>
+        <div style={{ width: 52, height: 52, border: "3px solid #1877f2", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.8s linear infinite", margin: "0 auto 20px" }} />
+        <div style={{ color: "#fff", fontWeight: 700, marginBottom: 6, fontFamily: "monospace" }}>Hikari Consultoria</div>
+        <div style={{ color: "#4b5563", fontSize: 13, fontFamily: "monospace" }}>Carregando {CLIENTS.length} clientes...</div>
+      </div>
+    </div>
+  );
+
+  return (
+    <div style={{ background: "#050508", minHeight: "100vh" }}>
+      <div style={{ borderBottom: "1px solid #1a1f2e", padding: "14px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: 10, position: "sticky", top: 0, background: "#050508", zIndex: 100 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {view === "detail" && (
+            <button onClick={() => { setView("overview"); setSelected(null); setCampaignSearch(""); setCampaignStatus("ALL"); }}
+              style={{ background: "none", border: "1px solid #1a1f2e", color: "#9ca3af", borderRadius: 8, padding: "6px 12px", cursor: "pointer", fontSize: 13 }}>← Voltar</button>
+          )}
+          <div style={{ width: 34, height: 34, background: "#1877f2", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 17, fontWeight: 900, color: "#fff" }}>𝕗</div>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15 }}>Hikari · Meta Ads</div>
+            <div style={{ fontSize: 11, color: "#4b5563" }}>{view === "detail" ? clientDetail?.name : `${filteredData.length} de ${data.length} clientes`}</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center", flexWrap: "wrap" }}>
+          {reloading && <div style={{ width: 16, height: 16, border: "2px solid #1877f2", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />}
+          {DATE_PRESETS.map(d => <Pill key={d.value} label={d.label} active={datePreset === d.value} onClick={() => handleDateChange(d.value)} />)}
+        </div>
+      </div>
+
+      <div style={{ padding: "20px 24px" }}>
+        {view === "overview" && (
+          <>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(148px, 1fr))", gap: 12, marginBottom: 20 }}>
+              {[
+                { label: "Clientes", value: data.length, icon: "👥", color: "#1877f2" },
+                { label: `Gasto (${presetLabel})`, value: `R$ ${fmt(totalSpend)}`, icon: "💰", color: "#22c55e" },
+                { label: "Campanhas ativas", value: `${totalActive}/${totalCampaigns}`, icon: "📢", color: "#f59e0b" },
+                { label: `Cliques (${presetLabel})`, value: fmtInt(totalClicks), icon: "🖱️", color: "#a78bfa" },
+                { label: "Alertas críticos", value: alertCount, icon: "🚨", color: alertCount > 0 ? "#ef4444" : "#22c55e" },
+              ].map((m, i) => (
+                <div key={i} className="card" style={{ padding: "15px", animationDelay: `${i * 0.05}s` }}>
+                  <div style={{ fontSize: 19, marginBottom: 7 }}>{m.icon}</div>
+                  <div style={{ fontSize: 10, color: "#4b5563", marginBottom: 2 }}>{m.label}</div>
+                  <div style={{ fontWeight: 800, fontSize: 17, color: m.color }}>{m.value}</div>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: "flex", gap: 10, marginBottom: 16, flexWrap: "wrap", alignItems: "center" }}>
+              <div style={{ flex: 1, minWidth: 180 }}>
+                <input type="text" placeholder="🔍  Buscar cliente..." value={search} onChange={e => setSearch(e.target.value)} />
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {["ALL", "OK", "ERRO"].map(s => <Pill key={s} label={s === "ALL" ? "Todos" : s} active={statusFilter === s} onClick={() => setStatusFilter(s)} />)}
+              </div>
+              <select value={sortBy} onChange={e => setSortBy(e.target.value)}>
+                {SORT_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
+              </select>
+            </div>
+
+            <div style={{ fontSize: 11, color: "#374151", marginBottom: 12, fontWeight: 700, letterSpacing: 1 }}>CLIENTES</div>
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(270px, 1fr))", gap: 12 }}>
+              {filteredData.map((c, i) => {
+                const s = clientSummary(c);
+                const redAlerts = s.allAlerts.filter(a => a.level === "red");
+                const yellowAlerts = s.allAlerts.filter(a => a.level === "yellow");
+                return (
+                  <div key={i} className="card client-card" style={{ padding: 18, border: `1px solid ${redAlerts.length > 0 ? "#7f1d1d66" : "#1a1f2e"}`, animationDelay: `${i * 0.06}s` }}
+                    onClick={() => { setSelected(c.name); setView("detail"); }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                      <div>
+                        <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{c.name}</div>
+                        <div style={{ fontSize: 11, color: "#4b5563" }}>{c.fbName || "—"}</div>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 4 }}>
+                        <span style={{ background: c.error ? "#7f1d1d22" : "#14532d22", color: c.error ? "#f87171" : "#22c55e", border: `1px solid ${c.error ? "#7f1d1d44" : "#14532d44"}`, borderRadius: 20, padding: "2px 8px", fontSize: 10, fontWeight: 700 }}>{c.error ? "ERRO" : "OK"}</span>
+                        {redAlerts.length > 0 && <span style={{ fontSize: 10, color: "#ef4444", fontWeight: 700 }}>🚨 {redAlerts.length} alerta{redAlerts.length > 1 ? "s" : ""}</span>}
+                        {redAlerts.length === 0 && yellowAlerts.length > 0 && <span style={{ fontSize: 10, color: "#f59e0b", fontWeight: 700 }}>⚠️ {yellowAlerts.length}</span>}
+                      </div>
+                    </div>
+                    {s.avgScore !== null && (
+                      <div style={{ marginBottom: 10 }}>
+                        <div style={{ fontSize: 10, color: "#4b5563", marginBottom: 4 }}>SAÚDE DA CONTA</div>
+                        <HealthBar score={s.avgScore} />
+                      </div>
+                    )}
+                    {c.error ? <div style={{ fontSize: 12, color: "#f87171" }}>{c.error}</div> : (
+                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 7 }}>
+                        {[
+                          { label: `Gasto (${presetLabel})`, value: `R$ ${fmt(s.spend)}` },
+                          { label: "Cliques", value: fmtInt(s.clicks) },
+                          { label: "CTR", value: `${s.ctr.toFixed(2)}%` },
+                          { label: "Ativas/Total", value: `${s.active}/${s.campaigns}` },
+                        ].map((m, j) => (
+                          <div key={j} style={{ background: "#080810", borderRadius: 7, padding: "8px 10px" }}>
+                            <div style={{ fontSize: 10, color: "#4b5563", marginBottom: 2 }}>{m.label}</div>
+                            <div style={{ fontWeight: 700, fontSize: 13 }}>{m.value}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <div style={{ marginTop: 10, fontSize: 12, color: "#1877f2", textAlign: "right" }}>Ver detalhes →</div>
+                  </div>
+                );
+              })}
+              {filteredData.length === 0 && <div style={{ gridColumn: "1/-1", textAlign: "center", color: "#4b5563", padding: "40px 0", fontSize: 14 }}>Nenhum cliente encontrado.</div>}
+            </div>
+          </>
+        )}
+
+        {view === "detail" && clientDetail && (() => {
+          const s = clientSummary(clientDetail);
+          const analysis = aiAnalysis[clientDetail.name];
+          const analyzing = aiLoading[clientDetail.name];
+          return (
+            <div>
+              <div style={{ display: "flex", gap: 10, marginBottom: 18, flexWrap: "wrap", alignItems: "center" }}>
+                <div style={{ flex: 1, minWidth: 200 }}><input type="text" placeholder="🔍  Buscar campanha..." value={campaignSearch} onChange={e => setCampaignSearch(e.target.value)} /></div>
+                <div style={{ display: "flex", gap: 6 }}>
+                  {["ALL", "ACTIVE", "PAUSED", "ARCHIVED"].map(st => <Pill key={st} label={st === "ALL" ? "Todas" : st} active={campaignStatus === st} onClick={() => setCampaignStatus(st)} />)}
+                </div>
+              </div>
+
+              {s.allAlerts.length > 0 && (
+                <div style={{ marginBottom: 16 }}>
+                  {s.allAlerts.map((a, i) => (
+                    <div key={i} style={{ background: a.level === "red" ? "#1a0808" : "#1a1200", border: `1px solid ${a.level === "red" ? "#7f1d1d55" : "#78350f55"}`, borderRadius: 10, padding: "10px 14px", marginBottom: 8, display: "flex", gap: 10, alignItems: "flex-start", fontSize: 13 }}>
+                      <span style={{ fontSize: 15 }}>{a.level === "red" ? "🚨" : "⚠️"}</span>
+                      <span style={{ color: a.level === "red" ? "#fca5a5" : "#fde68a" }}>{a.msg}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="card" style={{ padding: 20, marginBottom: 18, border: "1px solid #2d1f5e" }}>
+                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ width: 28, height: 28, background: "linear-gradient(135deg, #1877f2, #7c3aed)", borderRadius: 7, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 14, color: "#fff" }}>✦</div>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 14 }}>Análise por IA</div>
+                      <div style={{ fontSize: 11, color: "#4b5563" }}>Claude · Hikari Consultoria</div>
+                    </div>
+                  </div>
+                  <button className="ai-btn" onClick={() => handleAnalyze(clientDetail.name)} disabled={analyzing}>
+                    {analyzing ? "Analisando..." : analysis ? "Reanalisar" : "Analisar conta"}
+                  </button>
+                </div>
+                {analyzing && <div style={{ display: "flex", gap: 8, alignItems: "center", color: "#6b7280", fontSize: 13 }}><div style={{ width: 14, height: 14, border: "2px solid #7c3aed", borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.7s linear infinite" }} />Gerando análise...</div>}
+                {!analyzing && !analysis && <div style={{ color: "#374151", fontSize: 13, padding: "8px 0" }}>Clique em "Analisar conta" para receber diagnóstico e recomendações geradas pela IA.</div>}
+                {!analyzing && analysis && <div style={{ fontSize: 13, lineHeight: 1.7, color: "#d1d5db", whiteSpace: "pre-wrap", borderTop: "1px solid #1a1f2e", paddingTop: 14 }}>{analysis}</div>}
+              </div>
+
+              {clientDetail.error ? (
+                <div style={{ background: "#1a0a0a", border: "1px solid #7f1d1d", borderRadius: 12, padding: 24, color: "#fca5a5" }}>
+                  <div style={{ fontWeight: 700, marginBottom: 8 }}>Erro ao carregar dados</div>
+                  <div style={{ fontSize: 13 }}>{clientDetail.error}</div>
+                </div>
+              ) : clientDetail.accounts.map((acc, ai) => {
+                const camps = filteredCampaigns(acc.campaigns);
+                return (
+                  <div key={ai} style={{ marginBottom: 20 }}>
+                    <div className="card" style={{ padding: 18, marginBottom: 12 }}>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 2 }}>{acc.name}</div>
+                          <div style={{ fontSize: 11, color: "#4b5563" }}>{acc.id} · {acc.currency}</div>
+                        </div>
+                        {acc.health?.score !== null && <div style={{ textAlign: "right" }}><div style={{ fontSize: 10, color: "#4b5563", marginBottom: 4 }}>SAÚDE</div><HealthBar score={acc.health.score} /></div>}
+                      </div>
+                      {acc.insights && (
+                        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(110px, 1fr))", gap: 9 }}>
+                          {[
+                            { label: "Alcance", value: fmtInt(acc.insights.reach) },
+                            { label: "Impressões", value: fmtInt(acc.insights.impressions) },
+                            { label: "Cliques", value: fmtInt(acc.insights.clicks) },
+                            { label: "Gasto", value: `R$ ${fmt(acc.insights.spend)}` },
+                            { label: "CPC", value: `R$ ${fmt(acc.insights.cpc)}` },
+                            { label: "CTR", value: `${Number(acc.insights.ctr || 0).toFixed(2)}%` },
+                          ].map((m, j) => (
+                            <div key={j} style={{ background: "#080810", borderRadius: 8, padding: "10px 12px" }}>
+                              <div style={{ fontSize: 10, color: "#4b5563", marginBottom: 2 }}>{m.label}</div>
+                              <div style={{ fontWeight: 700, fontSize: 14 }}>{m.value}</div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {acc.campaigns.length > 0 && (
+                      <div className="card" style={{ padding: 18 }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, marginBottom: 12, color: "#374151", letterSpacing: 1, display: "flex", justifyContent: "space-between" }}>
+                          <span>CAMPANHAS</span><span style={{ color: "#4b5563" }}>{camps.length} de {acc.campaigns.length}</span>
+                        </div>
+                        {camps.length === 0 ? <div style={{ color: "#4b5563", fontSize: 13, padding: "8px 0" }}>Nenhuma campanha com esse filtro.</div> :
+                          camps.map((c, ci) => (
+                            <div key={ci} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "10px 0", borderBottom: ci < camps.length - 1 ? "1px solid #111" : "none", flexWrap: "wrap", gap: 8 }}>
+                              <div>
+                                <div style={{ fontWeight: 600, fontSize: 13 }}>{c.name}</div>
+                                <div style={{ fontSize: 11, color: "#4b5563" }}>{c.objective || "—"}</div>
+                              </div>
+                              <div style={{ background: statusColor(c.status) + "22", color: statusColor(c.status), border: `1px solid ${statusColor(c.status)}44`, borderRadius: 20, padding: "3px 10px", fontSize: 11, fontWeight: 700 }}>{c.status}</div>
+                            </div>
+                          ))
+                        }
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
